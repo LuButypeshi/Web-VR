@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <title>Exercice 2 - Grabbing VR</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <!-- Supprime le "grabbable" natif d'A-Frame 1.5+ (pensé pour le hand-tracking) AVANT de charger
+       super-hands, qui définit son propre "grabbable" pour les manettes. Sans cette ligne,
+       les deux composants portent le même nom et se marchent dessus silencieusement. -->
+  <script>delete AFRAME.components["grabbable"];</script>
   <script src="https://cdn.jsdelivr.net/gh/n5ro/aframe-physics-system@v4.0.1/dist/aframe-physics-system.min.js"></script>
   <script src="https://unpkg.com/super-hands@^3.0.6/dist/super-hands.min.js"></script>
 </head>
