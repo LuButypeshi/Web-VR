@@ -27,13 +27,13 @@
         const dt = delta / 1000;
         const camera = this.data.rig.querySelector('[camera]');
         if (!camera) return;
-        const forward = new THREE.Vector3();
-        camera.object3D.getWorldDirection(forward);
-        forward.y = 0; forward.normalize();
+        const backward = new THREE.Vector3();
+        camera.object3D.getWorldDirection(backward);
+        backward.y = 0; backward.normalize();
         const right = new THREE.Vector3();
-        right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).negate();
+        right.crossVectors(backward, new THREE.Vector3(0, 1, 0)).negate();
         const move = new THREE.Vector3();
-        move.addScaledVector(forward, this.inputY * this.data.speed * dt);
+        move.addScaledVector(backward, this.inputY * this.data.speed * dt);
         move.addScaledVector(right, this.inputX * this.data.speed * dt);
         this.data.rig.object3D.position.add(move);
       }
