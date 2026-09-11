@@ -8,9 +8,9 @@
   <script src="https://unpkg.com/super-hands@^3.0.6/dist/super-hands.min.js"></script>
 </head>
 <body style="margin:0;">
+  <a href="index.html" style="position:fixed;top:10px;left:10px;z-index:10;font-family:sans-serif;background:#222;color:#fff;padding:8px 14px;border-radius:8px;text-decoration:none;">← Menu</a>
 
   <script>
-    // joystick-move / joystick-turn : identiques aux exercices 1 et 2, inchangés.
     AFRAME.registerComponent('joystick-move', {
       schema: { rig: { type: 'selector' }, speed: { type: 'number', default: 2 } },
       init: function () {
@@ -30,7 +30,7 @@
         const right = new THREE.Vector3();
         right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).negate();
         const move = new THREE.Vector3();
-        move.addScaledVector(forward, -this.inputY * this.data.speed * dt);
+        move.addScaledVector(forward, this.inputY * this.data.speed * dt);
         move.addScaledVector(right, this.inputX * this.data.speed * dt);
         this.data.rig.object3D.position.add(move);
       }
@@ -91,6 +91,7 @@
         this.muzzle.object3D.getWorldPosition(spawnPos);
 
         const projectile = document.createElement('a-sphere');
+        projectile.classList.add('projectile');
         projectile.setAttribute('radius', '0.05');
         projectile.setAttribute('color', '#FFD700');
         projectile.setAttribute('position', `${spawnPos.x} ${spawnPos.y} ${spawnPos.z}`);
@@ -109,7 +110,6 @@
           );
         });
 
-        // Nettoyage après quelques secondes pour ne pas accumuler les projectiles.
         setTimeout(() => {
           if (projectile.parentNode) projectile.parentNode.removeChild(projectile);
         }, 4000);
@@ -136,12 +136,14 @@
       <a-entity camera position="0 1.6 0" look-controls></a-entity>
 
       <a-entity id="leftHand" hand-controls="hand: left"
-        sphere-collider="objects: [grabbable]" super-hands
+        sphere-collider="objects: [grabbable]"
+        static-body="shape: sphere; sphereRadius: 0.03" super-hands
         joystick-move="rig: #rig">
       </a-entity>
 
       <a-entity id="rightHand" hand-controls="hand: right"
-        sphere-collider="objects: [grabbable]" super-hands
+        sphere-collider="objects: [grabbable]"
+        static-body="shape: sphere; sphereRadius: 0.03" super-hands
         joystick-turn="rig: #rig">
       </a-entity>
     </a-entity>
