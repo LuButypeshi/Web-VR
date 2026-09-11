@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test debug grab</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script>delete AFRAME.components["grabbable"];</script>
+  <script src="https://unpkg.com/super-hands@^3.0.6/dist/super-hands.min.js"></script>
+</head>
+<body>
+  <a-scene>
+
+    <!-- Texte de debug fixé devant la caméra (HUD) -->
+    <a-entity id="debugHud" position="0 0 -1" text="value: En attente...; color: #0F0; width: 2; align: center"></a-entity>
+
+    <a-box id="target" position="0 1.5 -1" color="red"
+      hoverable grabbable
+      event-set__hoveron="_event: hover-start; color: yellow"
+      event-set__hoveroff="_event: hover-end; color: red"
+      event-set__grabon="_event: grab-start; color: lime"
+      event-set__graboff="_event: grab-end; color: red">
+    </a-box>
+
+    <a-entity id="cameraRig" position="0 0 0">
+      <a-entity id="head" camera position="0 1.6 0" look-controls></a-entity>
+
+      <a-entity id="leftHand" hand-controls="hand: left"
+        sphere-collider="objects: #target" super-hands>
+      </a-entity>
+
+      <a-entity id="rightHand" hand-controls="hand: right"
+        sphere-collider="objects: #target" super-hands>
+      </a-entity>
+    </a-entity>
+
+  </a-scene>
+
+  <script>
+    // Le HUD suit la caméra pour rester toujours visible, et affiche
+    // en direct les derniers événements reçus par l'objet cible.
+    const target = document.querySelector('#target');
+    const hud = document.querySelector('#debugHud');
+    const head = document.querySelector('#head');
+    const log = [];
+
+    function addLog(msg) {
+      log.unshift(msg);
+      if (log.length > 4) log.pop();
+      hud.setAttribute('text', 'value', log.join('\n'));
+    }
+
+    ['hover-start', 'hover-end', 'grab-start', 'grab-end'].forEach((evtName) => {
+      target.addEventListener(evtName, () => addLog(evtName + ' @ ' + new Date().toLocaleTimeString()));
+    });
+
+    // Garde le HUD collé devant la caméra à chaque frame.
+    AFRAME.registerComponent('follow-camera', {
+      tick: function () {
+        if (!head.object3D) return;
+        const worldPos = new THREE.Vector3();
+        const worldQuat = new THREE.Quaternion();
+        head.object3D.getWorldPosition(worldPos);
+        head.object3D.getWorldQuaternion(worldQuat);
+        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(worldQuat);
+        hud.object3D.position.copy(worldPos).add(forward.multiplyScalar(1));
+        hud.object3D.quaternion.copy(worldQuat);
+      }
+    });
+    hud.setAttribute('follow-camera', '');
+  </script>
+</body>
+</html>
