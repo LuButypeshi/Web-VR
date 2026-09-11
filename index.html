@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>~*~ WebVR~*~</title>
+  <style>
+    * { box-sizing: border-box; cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><text y="18" font-size="18">✨</text></svg>') 12 12, auto; }
+
+    body {
+      margin: 0;
+      font-family: "Comic Sans MS", "Comic Sans", cursive, sans-serif;
+      color: #00ffea;
+      background:
+        radial-gradient(1px 1px at 10% 20%, #fff, transparent),
+        radial-gradient(1px 1px at 80% 10%, #fff, transparent),
+        radial-gradient(2px 2px at 40% 60%, #fff, transparent),
+        radial-gradient(1px 1px at 60% 80%, #fff, transparent),
+        radial-gradient(1px 1px at 25% 85%, #fff, transparent),
+        radial-gradient(2px 2px at 90% 70%, #fff, transparent),
+        linear-gradient(#0a0033, #1a0050 40%, #2d0066 70%, #0a0033);
+      background-attachment: fixed;
+      overflow-x: hidden;
+    }
+
+    .container { max-width: 720px; margin: 0 auto; padding: 16px; }
+
+    .topbar {
+      background: repeating-linear-gradient(45deg, #ff00cc, #ff00cc 10px, #ffcc00 10px, #ffcc00 20px);
+      padding: 4px 0;
+      border-bottom: 4px dashed #00ffea;
+    }
+    .topbar marquee { color: #000; font-weight: bold; font-size: 0.9rem; text-shadow: 1px 1px 0 #fff; }
+
+    h1.title {
+      text-align: center;
+      font-size: 2.4rem;
+      margin: 18px 0 4px;
+      background: linear-gradient(90deg, #ff0055, #ff9900, #ffee00, #33ff00, #00ccff, #cc00ff, #ff0055);
+      background-size: 400% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: rainbow 4s linear infinite;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    @keyframes rainbow { to { background-position: 400% 0; } }
+
+    p.tagline { text-align: center; color: #ffff66; font-size: 1rem; text-shadow: 2px 2px 0 #ff00aa; margin-top: 0; }
+
+    .goggles {
+      text-align: center;
+      font-size: 3rem;
+      margin: 6px 0 0;
+      animation: float 2.5s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .panel {
+      background: #1a0040;
+      border: 4px ridge #ff00cc;
+      padding: 4px;
+      box-shadow: 0 0 20px #ff00cc88;
+      margin-top: 20px;
+    }
+    .panel-inner { border: 2px dashed #00ffea; padding: 16px; }
+
+    ul.menu { list-style: none; padding: 0; margin: 0; }
+    ul.menu li { margin-bottom: 12px; }
+    ul.menu a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: linear-gradient(180deg, #330066, #1a0033);
+      border: 3px outset #cc00ff;
+      padding: 10px 14px;
+      text-decoration: none;
+      color: #ffff33;
+      font-weight: bold;
+      font-size: 1rem;
+      text-shadow: 1px 1px 0 #000;
+      transition: transform 0.1s;
+    }
+    ul.menu a:hover {
+      transform: scale(1.03) rotate(-0.5deg);
+      border-style: inset;
+      background: linear-gradient(180deg, #660099, #33006b);
+    }
+    ul.menu a:active { transform: scale(0.98); }
+
+    .badge {
+      flex: 0 0 auto;
+      background: #00ffea;
+      color: #1a0040;
+      border-radius: 50%;
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      border: 2px solid #000;
+    }
+    .badge.ex1 { background: #4CC3D9; }
+    .badge.ex2 { background: #EF2D5E; }
+    .badge.ex3 { background: #FFD700; color: #1a0040; }
+    .badge.ex4 { background: #FFA500; color: #1a0040; }
+
+    .newgif {
+      background: #ff0000;
+      color: #fff;
+      font-size: 0.65rem;
+      padding: 2px 6px;
+      border-radius: 3px;
+      margin-left: auto;
+      animation: blink 0.8s step-start infinite;
+      font-weight: bold;
+    }
+    @keyframes blink { 50% { opacity: 0.55; } }
+
+    .desc { display: block; font-size: 0.75rem; color: #ccbbff; font-weight: normal; }
+
+    .badges-row {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 22px 0;
+    }
+    .webbadge {
+      background: #000;
+      color: #0f0;
+      font-family: "Courier New", monospace;
+      font-size: 0.65rem;
+      padding: 6px 10px;
+      border: 1px solid #0f0;
+      text-align: center;
+      line-height: 1.3;
+    }
+    .webbadge.b2 { color: #ff0; border-color: #ff0; }
+    .webbadge.b3 { color: #f0f; border-color: #f0f; }
+
+    hr.sep {
+      border: none;
+      height: 3px;
+      background: repeating-linear-gradient(90deg, #ff00cc 0 8px, #00ffea 8px 16px);
+      margin: 20px 0;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 0.75rem;
+      color: #9988cc;
+      margin: 24px 0 10px;
+      line-height: 1.6;
+    }
+    footer .sig { color: #ff66cc; font-style: italic; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <marquee behavior="scroll" direction="left" scrollamount="5">
+      ★彡 WebVR ★彡 A-FRAME + WEBXR ★彡 CHAUSSEZ VOTRE CASQUE ★彡 100% FAIT MAIN ★彡 ATTENTION AUX MURS DU SALON ★彡
+    </marquee>
+  </div>
+
+  <div class="container">
+
+    <h1 class="title">☆ WebVR ☆</h1>
+    <p class="tagline">// objets, grab, armes et cibles en réalité virtuelle //</p>
+    <div class="goggles">🥽</div>
+
+    <div class="panel">
+      <div class="panel-inner">
+        <ul class="menu">
+          <li>
+            <a href="exercice1.html">
+              <span class="badge ex1">①</span>
+              <span>
+                SceneVR
+                <span class="desc">objets 3D, lumières/ombres, déplacement aux joysticks</span>
+              </span>
+            </a>
+          </li>
+          <li>
+            <a href="exercice2.html">
+              <span class="badge ex2">②</span>
+              <span>
+                Grabbing
+                <span class="desc">saisir et relâcher des objets avec les contrôleurs</span>
+              </span>
+              <span class="newgif">NEW!</span>
+            </a>
+          </li>
+          <li>
+            <a href="exercice3.html">
+              <span class="badge ex3">③</span>
+              <span>
+                Arme en VR
+                <span class="desc">tenir une arme et tirer à la gâchette</span>
+              </span>
+            </a>
+          </li>
+          <li>
+            <a href="exercice4.html">
+              <span class="badge ex4">④</span>
+              <span>
+                Cibles &amp; particules
+                <span class="desc">cibles aléatoires, impacts, son et explosions</span>
+              </span>
+              <span class="newgif">HOT!</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="badges-row">
+      <div class="webbadge">◄ BEST VIEWED WITH<br>A VR HEADSET ►</div>
+      <div class="webbadge b2">⚡ POWERED BY<br>A-FRAME ⚡</div>
+      <div class="webbadge b3">✓ WEBXR<br>READY ✓</div>
+    </div>
+
+    <hr class="sep">
+
+    <footer>
+      Ce site fonctionne mieux avec de la musique MIDI en fond sonore imaginaire.<br>
+      Dégagez l'espace autour de vous avant de tester les exercices 2, 3 et 4.<br>
+      <span class="sig">~ made with beaucoup de balises &lt;marquee&gt; ~</span>
+    </footer>
+
+  </div>
+
+</body>
+</html>

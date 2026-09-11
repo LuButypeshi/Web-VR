@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Exercice 4 - Cibles et particules</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/n5ro/aframe-physics-system@v4.0.1/dist/aframe-physics-system.min.js"></script>
+  <script src="https://unpkg.com/super-hands@^3.0.6/dist/super-hands.min.js"></script>
+</head>
+<body style="margin:0;">
+
+  <script>
+    // --- joystick-move, joystick-turn : identiques aux exercices précédents ---
+    AFRAME.registerComponent('joystick-move', {
+      schema: { rig: { type: 'selector' }, speed: { type: 'number', default: 2 } },
+      init: function () {
+        this.inputX = 0; this.inputY = 0;
+        this.el.addEventListener('thumbstickmoved', (evt) => {
+          this.inputX = evt.detail.x; this.inputY = evt.detail.y;
+        });
+      },
+      tick: function (time, delta) {
+        if (!this.data.rig) return;
+        const dt = delta / 1000;
+        const camera = this.data.rig.querySelector('[camera]');
+        if (!camera) return;
+        const forward = new THREE.Vector3();
+        camera.object3D.getWorldDirection(forward);
+        forward.y = 0; forward.normalize();
+        const right = new THREE.Vector3();
+        right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).negate();
+        const move = new THREE.Vector3();
+        move.addScaledVector(forward, -this.inputY * this.data.speed * dt);
+        move.addScaledVector(right, this.inputX * this.data.speed * dt);
+        this.data.rig.object3D.position.add(move);
+      }
+    });
+
+    AFRAME.registerComponent('joystick-turn', {
+      schema: { rig: { type: 'selector' }, turnSpeed: { type: 'number', default: 100 } },
+      init: function () {
+        this.inputX = 0;
+        this.el.addEventListener('thumbstickmoved', (evt) => { this.inputX = evt.detail.x; });
+      },
+      tick: function (time, delta) {
+        if (!this.data.rig || Math.abs(this.inputX) < 0.15) return;
+        const dt = delta / 1000;
+        this.data.rig.object3D.rotation.y += THREE.MathUtils.degToRad(-this.inputX * this.data.turnSpeed * dt);
+      }
+    });
+
+    // --- weapon : identique à l'exercice 3, avec UN ajout : classList.add('projectile') ---
+    AFRAME.registerComponent('weapon', {
+      schema: {
+        fireRate: { type: 'number', default: 0.25 },
+        projectileSpeed: { type: 'number', default: 20 }
+      },
+      init: function () {
+        this.isGrabbed = false;
+        this.nextFireTime = 0;
+        this.muzzle = this.el.querySelector('.muzzle-point');
+        this.el.addEventListener('grab-start', () => { this.isGrabbed = true; });
+        this.el.addEventListener('grab-end', () => { this.isGrabbed = false; });
+        this.onTriggerDown = this.onTriggerDown.bind(this);
+        document.querySelectorAll('#leftHand, #rightHand').forEach((hand) => {
+          hand.addEventListener('triggerdown', this.onTriggerDown);
+        });
+      },
+      onTriggerDown: function () {
+        if (!this.isGrabbed) return;
+        const now = this.el.sceneEl.time / 1000;
+        if (now < this.nextFireTime) return;
+        this.nextFireTime = now + this.data.fireRate;
+        this.fire();
+      },
+      fire: function () {
+        if (!this.muzzle) return;
+        const direction = new THREE.Vector3();
+        this.muzzle.object3D.getWorldDirection(direction);
+        const spawnPos = new THREE.Vector3();
+        this.muzzle.object3D.getWorldPosition(spawnPos);
+
+        const projectile = document.createElement('a-sphere');
+        projectile.classList.add('projectile'); // <-- NOUVEAU : permet aux cibles de le reconnaître
+        projectile.setAttribute('radius', '0.05');
+        projectile.setAttribute('color', '#FFD700');
+        projectile.setAttribute('position', `${spawnPos.x} ${spawnPos.y} ${spawnPos.z}`);
+        projectile.setAttribute('dynamic-body', 'shape: box; mass: 0.2');
+        this.el.sceneEl.appendChild(projectile);
+
+        const speed = this.data.projectileSpeed;
+        projectile.addEventListener('body-loaded', () => {
+          projectile.body.velocity.set(direction.x * speed, direction.y * speed, direction.z * speed);
+        });
+
+        setTimeout(() => { if (projectile.parentNode) projectile.parentNode.removeChild(projectile); }, 4000);
+      }
+    });
+
+    /**
+     * target-hittable : posé sur chaque cible. Écoute l'événement "collide"
+     * (émis par aframe-physics-system à chaque contact physique), vérifie
+     * si l'objet en contact est un projectile (classe .projectile), et si
+     * oui déclenche le son + les particules avant de supprimer les deux objets.
+     */
+    AFRAME.registerComponent('target-hittable', {
+      init: function () {
+        this.onCollide = this.onCollide.bind(this);
+        this.el.addEventListener('collide', this.onCollide);
+      },
+      onCollide: function (evt) {
+        const otherEl = evt.detail.body.el;
+        if (!otherEl || !otherEl.classList.contains('projectile')) return;
+
+        this.playImpactSound();
+        this.spawnParticleBurst();
+
+        if (otherEl.parentNode) otherEl.parentNode.removeChild(otherEl);
+        if (this.el.parentNode) this.el.parentNode.removeChild(this.el);
+      },
+      playImpactSound: function () {
+        const pos = this.el.getAttribute('position');
+        const soundEl = document.createElement('a-entity');
+        soundEl.setAttribute('position', pos);
+        // Remplace #hitSound par ton propre fichier audio dans <a-assets> plus bas.
+        soundEl.setAttribute('sound',
+          'src: #hitSound; autoplay: true; volume: 1; ' +
+          'distanceModel: linear; maxDistance: 15; refDistance: 1; rolloffFactor: 2');
+        this.el.sceneEl.appendChild(soundEl);
+        setTimeout(() => { if (soundEl.parentNode) soundEl.parentNode.removeChild(soundEl); }, 2000);
+      },
+      spawnParticleBurst: function () {
+        const pos = this.el.object3D.position;
+        for (let i = 0; i < 8; i++) {
+          const p = document.createElement('a-box');
+          p.setAttribute('width', 0.05);
+          p.setAttribute('height', 0.05);
+          p.setAttribute('depth', 0.05);
+          p.setAttribute('color', '#FFA500');
+          p.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
+          p.setAttribute('dynamic-body', 'shape: box; mass: 0.05');
+          this.el.sceneEl.appendChild(p);
+
+          const dir = new THREE.Vector3(Math.random() - 0.5, Math.random(), Math.random() - 0.5).normalize();
+          p.addEventListener('body-loaded', () => {
+            p.body.velocity.set(dir.x * 3, dir.y * 3 + 2, dir.z * 3);
+          });
+
+          setTimeout(() => { if (p.parentNode) p.parentNode.removeChild(p); }, 1000);
+        }
+      }
+    });
+
+    /**
+     * target-spawner : fait apparaître une nouvelle cible (forme aléatoire,
+     * position aléatoire) à intervalle régulier.
+     */
+    AFRAME.registerComponent('target-spawner', {
+      schema: {
+        interval: { type: 'number', default: 3 },
+        areaX: { type: 'number', default: 4 },
+        areaZ: { type: 'number', default: 3 },
+        baseZ: { type: 'number', default: -5 },
+        baseHeight: { type: 'number', default: 1 }
+      },
+      init: function () { this.timer = 0; },
+      tick: function (time, delta) {
+        this.timer += delta / 1000;
+        if (this.timer < this.data.interval) return;
+        this.timer = 0;
+        this.spawnTarget();
+      },
+      spawnTarget: function () {
+        const shapes = ['a-box', 'a-cone', 'a-cylinder'];
+        const tag = shapes[Math.floor(Math.random() * shapes.length)];
+        const target = document.createElement(tag);
+
+        const x = (Math.random() * 2 - 1) * this.data.areaX;
+        const y = this.data.baseHeight + Math.random() * 1.5;
+        const z = this.data.baseZ + (Math.random() * 2 - 1) * this.data.areaZ;
+
+        target.setAttribute('position', `${x} ${y} ${z}`);
+        target.setAttribute('color', '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0'));
+        target.classList.add('target');
+        target.setAttribute('static-body', 'shape: box');
+        target.setAttribute('target-hittable', '');
+        target.setAttribute('shadow', 'cast: true; receive: true');
+
+        if (tag === 'a-cone') {
+          target.setAttribute('radius-bottom', '0.3');
+          target.setAttribute('radius-top', '0');
+          target.setAttribute('height', '0.6');
+        } else if (tag === 'a-cylinder') {
+          target.setAttribute('radius', '0.3');
+          target.setAttribute('height', '0.6');
+        } else {
+          target.setAttribute('width', '0.5');
+          target.setAttribute('height', '0.5');
+          target.setAttribute('depth', '0.5');
+        }
+
+        this.el.sceneEl.appendChild(target);
+      }
+    });
+  </script>
+
+  <a-scene physics="debug: false; gravity: -9.8">
+
+    <a-assets>
+      <!-- Remplace ce chemin par ton propre fichier son (un "hit"/cloche/explosion court) -->
+      <audio id="hitSound" src="sounds/hit.mp3" preload="auto"></audio>
+    </a-assets>
+
+    <a-plane position="0 0 0" rotation="-90 0 0" width="20" height="20" color="#7BC8A4" shadow="receive: true"></a-plane>
+    <a-box position="0 -0.05 0" width="20" height="0.1" depth="20" visible="false" static-body="shape: box"></a-box>
+
+    <a-entity id="weaponRoot" position="0 1 -1.5" grabbable dynamic-body="shape: box; mass: 0.5" weapon>
+      <a-box width="0.08" height="0.08" depth="0.35" color="#333"></a-box>
+      <a-box width="0.06" height="0.15" depth="0.06" color="#222" position="0 -0.1 0.1"></a-box>
+      <a-entity class="muzzle-point" position="0 0 -0.2"></a-entity>
+    </a-entity>
+
+    <!-- Émetteur de cibles : entité invisible, juste porteuse du composant -->
+    <a-entity target-spawner="interval: 3"></a-entity>
+
+    <a-light type="directional" castShadow="true" intensity="0.8" position="-1 3 1"></a-light>
+    <a-light type="ambient" color="#888" intensity="0.5"></a-light>
+
+    <a-entity id="rig" position="0 0 3">
+      <a-entity camera position="0 1.6 0" look-controls></a-entity>
+      <a-entity id="leftHand" hand-controls="hand: left" sphere-collider="objects: [grabbable]" super-hands joystick-move="rig: #rig"></a-entity>
+      <a-entity id="rightHand" hand-controls="hand: right" sphere-collider="objects: [grabbable]" super-hands joystick-turn="rig: #rig"></a-entity>
+    </a-entity>
+
+  </a-scene>
+</body>
+</html>

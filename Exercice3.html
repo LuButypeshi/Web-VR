@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Exercice 3 - Arme VR</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/n5ro/aframe-physics-system@v4.0.1/dist/aframe-physics-system.min.js"></script>
+  <script src="https://unpkg.com/super-hands@^3.0.6/dist/super-hands.min.js"></script>
+</head>
+<body style="margin:0;">
+
+  <script>
+    // joystick-move / joystick-turn : identiques aux exercices 1 et 2, inchangés.
+    AFRAME.registerComponent('joystick-move', {
+      schema: { rig: { type: 'selector' }, speed: { type: 'number', default: 2 } },
+      init: function () {
+        this.inputX = 0; this.inputY = 0;
+        this.el.addEventListener('thumbstickmoved', (evt) => {
+          this.inputX = evt.detail.x; this.inputY = evt.detail.y;
+        });
+      },
+      tick: function (time, delta) {
+        if (!this.data.rig) return;
+        const dt = delta / 1000;
+        const camera = this.data.rig.querySelector('[camera]');
+        if (!camera) return;
+        const forward = new THREE.Vector3();
+        camera.object3D.getWorldDirection(forward);
+        forward.y = 0; forward.normalize();
+        const right = new THREE.Vector3();
+        right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).negate();
+        const move = new THREE.Vector3();
+        move.addScaledVector(forward, -this.inputY * this.data.speed * dt);
+        move.addScaledVector(right, this.inputX * this.data.speed * dt);
+        this.data.rig.object3D.position.add(move);
+      }
+    });
+
+    AFRAME.registerComponent('joystick-turn', {
+      schema: { rig: { type: 'selector' }, turnSpeed: { type: 'number', default: 100 } },
+      init: function () {
+        this.inputX = 0;
+        this.el.addEventListener('thumbstickmoved', (evt) => { this.inputX = evt.detail.x; });
+      },
+      tick: function (time, delta) {
+        if (!this.data.rig || Math.abs(this.inputX) < 0.15) return;
+        const dt = delta / 1000;
+        this.data.rig.object3D.rotation.y += THREE.MathUtils.degToRad(-this.inputX * this.data.turnSpeed * dt);
+      }
+    });
+
+    /**
+     * weapon : gère le tir. Écoute triggerdown sur LES DEUX mains en
+     * permanence, mais ne fait rien si l'arme n'est pas actuellement saisie
+     * (isGrabbed, mis à jour via grab-start/grab-end de super-hands).
+     * Le canon (MuzzlePoint) suit déjà la rotation de la main porteuse
+     * grâce à "grabbable" — pas besoin de savoir quelle main a tiré.
+     */
+    AFRAME.registerComponent('weapon', {
+      schema: {
+        fireRate: { type: 'number', default: 0.25 },
+        projectileSpeed: { type: 'number', default: 20 }
+      },
+      init: function () {
+        this.isGrabbed = false;
+        this.nextFireTime = 0;
+        this.muzzle = this.el.querySelector('.muzzle-point');
+
+        this.el.addEventListener('grab-start', () => { this.isGrabbed = true; });
+        this.el.addEventListener('grab-end', () => { this.isGrabbed = false; });
+
+        this.onTriggerDown = this.onTriggerDown.bind(this);
+        document.querySelectorAll('#leftHand, #rightHand').forEach((hand) => {
+          hand.addEventListener('triggerdown', this.onTriggerDown);
+        });
+      },
+      onTriggerDown: function () {
+        if (!this.isGrabbed) return;
+        const now = this.el.sceneEl.time / 1000;
+        if (now < this.nextFireTime) return;
+        this.nextFireTime = now + this.data.fireRate;
+        this.fire();
+      },
+      fire: function () {
+        if (!this.muzzle) return;
+
+        const direction = new THREE.Vector3();
+        this.muzzle.object3D.getWorldDirection(direction);
+
+        const spawnPos = new THREE.Vector3();
+        this.muzzle.object3D.getWorldPosition(spawnPos);
+
+        const projectile = document.createElement('a-sphere');
+        projectile.setAttribute('radius', '0.05');
+        projectile.setAttribute('color', '#FFD700');
+        projectile.setAttribute('position', `${spawnPos.x} ${spawnPos.y} ${spawnPos.z}`);
+        // shape: box explicite : évite le crash de détection automatique de forme
+        // (bug connu d'aframe-physics-system avec les versions récentes de three.js).
+        projectile.setAttribute('dynamic-body', 'shape: box; mass: 0.2');
+
+        this.el.sceneEl.appendChild(projectile);
+
+        const speed = this.data.projectileSpeed;
+        projectile.addEventListener('body-loaded', () => {
+          projectile.body.velocity.set(
+            direction.x * speed,
+            direction.y * speed,
+            direction.z * speed
+          );
+        });
+
+        // Nettoyage après quelques secondes pour ne pas accumuler les projectiles.
+        setTimeout(() => {
+          if (projectile.parentNode) projectile.parentNode.removeChild(projectile);
+        }, 4000);
+      }
+    });
+  </script>
+
+  <a-scene physics="debug: false; gravity: -9.8">
+
+    <a-plane position="0 0 0" rotation="-90 0 0" width="20" height="20" color="#7BC8A4" shadow="receive: true"></a-plane>
+    <a-box position="0 -0.05 0" width="20" height="0.1" depth="20" visible="false" static-body="shape: box"></a-box>
+
+    <!-- Arme (placeholder en primitives, remplaçable par un gltf-model) -->
+    <a-entity id="weaponRoot" position="0 1 -1.5" grabbable dynamic-body="shape: box; mass: 0.5" weapon>
+      <a-box width="0.08" height="0.08" depth="0.35" color="#333" position="0 0 0"></a-box>
+      <a-box width="0.06" height="0.15" depth="0.06" color="#222" position="0 -0.1 0.1"></a-box>
+      <a-entity class="muzzle-point" position="0 0 -0.2"></a-entity>
+    </a-entity>
+
+    <a-light type="directional" castShadow="true" intensity="0.8" position="-1 3 1"></a-light>
+    <a-light type="ambient" color="#888" intensity="0.5"></a-light>
+
+    <a-entity id="rig" position="0 0 3">
+      <a-entity camera position="0 1.6 0" look-controls></a-entity>
+
+      <a-entity id="leftHand" hand-controls="hand: left"
+        sphere-collider="objects: [grabbable]" super-hands
+        joystick-move="rig: #rig">
+      </a-entity>
+
+      <a-entity id="rightHand" hand-controls="hand: right"
+        sphere-collider="objects: [grabbable]" super-hands
+        joystick-turn="rig: #rig">
+      </a-entity>
+    </a-entity>
+
+  </a-scene>
+</body>
+</html>
