@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test minimal grab</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://unpkg.com/[email protected]/dist/super-hands.min.js"></script>
+</head>
+<body>
+  <a-scene>
+    <a-box position="0 1.5 -1" color="red" grabbable></a-box>
+
+    <a-entity position="0 0 0">
+      <a-entity camera position="0 1.6 0" look-controls></a-entity>
+      <a-entity hand-controls="hand: left" sphere-collider="objects: a-box" super-hands></a-entity>
+      <a-entity hand-controls="hand: right" sphere-collider="objects: a-box" super-hands></a-entity>
+    </a-entity>
+  </a-scene>
+</body>
+</html>
