@@ -123,7 +123,7 @@
     <a-box position="0 -0.05 0" width="20" height="0.1" depth="20" visible="false" static-body="shape: box"></a-box>
 
     <!-- Arme (placeholder en primitives, remplaçable par un gltf-model) -->
-    <a-entity id="weaponRoot" position="0 1 -1.5" grabbable dynamic-body="shape: box; mass: 0.5" weapon>
+    <a-entity id="weaponRoot" position="0 1 -1.5" grabbable="usePhysics: never" dynamic-body="shape: box; mass: 0.5" weapon>
       <a-box width="0.08" height="0.08" depth="0.35" color="#333" position="0 0 0"></a-box>
       <a-box width="0.06" height="0.15" depth="0.06" color="#222" position="0 -0.1 0.1"></a-box>
       <a-entity class="muzzle-point" position="0 0 -0.2"></a-entity>
@@ -137,13 +137,13 @@
 
       <a-entity id="leftHand" hand-controls="hand: left"
         sphere-collider="objects: [grabbable]"
-        static-body="shape: sphere; sphereRadius: 0.03" super-hands
+        super-hands
         joystick-move="rig: #rig">
       </a-entity>
 
       <a-entity id="rightHand" hand-controls="hand: right"
         sphere-collider="objects: [grabbable]"
-        static-body="shape: sphere; sphereRadius: 0.03" super-hands
+        super-hands
         joystick-turn="rig: #rig">
       </a-entity>
     </a-entity>
